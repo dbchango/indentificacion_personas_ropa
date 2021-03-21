@@ -1,0 +1,52 @@
+// Example : neural network learning
+// usage: prog training_data_file testing_data_file
+
+// For use with test / training datasets : handwritten_ex
+
+// Author : Toby Breckon, toby.breckon@cranfield.ac.uk
+
+// Copyright (c) 2010 School of Engineering, Cranfield University
+// License : LGPL - http://www.gnu.org/licenses/lgpl.html
+
+
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+#include <stdlib.h>
+
+#include "opencv/cv.h"
+#include "opencv/ml.h"
+
+/******************************************************************************/
+// global definitions (for speed and ease of use)
+
+#define NUMBER_OF_TRAINING_SAMPLES 440
+#define ATTRIBUTES_PER_SAMPLE 2
+#define NUMBER_OF_TESTING_SAMPLES 1
+
+#define NUMBER_OF_CLASSES 3
+
+// N.B. classes are integer handwritten digits in range 0-9
+
+/******************************************************************************/
+
+// loads the sample database from file (which is a CSV text file)
+
+using namespace cv; // OpenCV API is in the C++ "cv" namespace
+
+
+//Clase que implementa el Clasificador Neuronal tipo backPropagation
+class Red{
+     int num;
+     CvANN_MLP* nnetwork;
+  public:
+     Red(){num = 0;};
+     //Leer datos de entrenamiento y de calsificación
+     int read_data_from_txt(const char* filename, Mat data, Mat classes, int n_samples );
+     //Función de Entrenamiento de la Red
+     int training_network();
+     //Función que permite clasificar los datos de Aspect Radio, Compacidad
+     int test_network();
+     void SetNum(int n){num = n;};
+     int GetNum(){return num;};
+};

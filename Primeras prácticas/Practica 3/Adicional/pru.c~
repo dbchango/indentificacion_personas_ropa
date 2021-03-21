@@ -1,0 +1,143 @@
+#include <stdio.h>
+
+#include "opencv2/core/core_c.h"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui_c.h"
+
+#define mivideo "vga.mpg"
+
+int main(){
+
+   CvCapture *CapVideo = NULL;
+   CapVideo = cvCaptureFromFile(mivideo);
+
+   if (!CapVideo){
+       printf("No se pudo abrir el archivo\n");
+       exit(-1);
+   }
+
+
+   IplImage *Imagen = NULL;
+   IplImage *ImgFonGris = NULL;
+   IplImage *ImgNueGris = NULL;
+   IplImage *ImgFreGris = NULL;
+
+   Imagen = cvQueryFrame(CapVideo);
+   cvNamedWindow("Imagen Original",0);
+   cvShowImage("Imagen Original", Imagen);
+
+   int umbral = 25;
+   int umbfan = 20;
+   int width = 720;
+   int height = 400;
+   float alfa = 0.05;
+
+   int ConLockedFon[width][height];
+   int ConLockedFre[width][height];
+
+   IplImage *ImgFrist = cvCreateImage(cvGetSize(Imagen), Imagen->depth, 1);
+   cvCvtColor(Imagen, ImgFrist, CV_RGB2GRAY);
+   ImgFonGris = cvClone(ImgFrist);
+
+   cvNamedWindow("Fondo Gris",0);
+   cvShowImage("Fondo Gris", ImgFonGris);
+
+   cvNamedWindow("Nueva Gris",0);
+   ImgNueGris = cvCreateImage(cvGetSize(Imagen),Imagen->depth,1);
+   ImgFreGris = cvCreateImage(cvGetSize(ImgFonGris),ImgFonGris->depth,1);
+
+   IplImage *ImgLocked  = NULL;
+   
+   ImgLocked = cvCreateImage(cvGetSize(Imagen),Imagen->depth,1);
+//cvCvtColor(Imagen, ImgLocked, CV_RGB2GRAY);
+   ImgLocked = cvClone(ImgFrist);
+
+   width = ImgFonGris->width;
+   height = ImgFonGris->height;
+
+   int row, col;
+   uchar *ppixelImgLoc;
+
+   for (row = 0; row < height; row++)
+      for (col = 0; col < width; col++){
+          ConLockedFon[row][col]=0;
+          ConLockedFre[row][col]=0;
+          ppixelImgLoc = cvPtr2D( ImgLocked, row, col, NULL );
+          *ppixelImgLoc = 0;
+      }      
+   
+   cvNamedWindow("Frente",0);
+
+   uchar *ppixelImgFreGris;
+   uchar *ppixelImgFonGris;
+   uchar *ppixelImgNueGris;
+
+   while (1){
+      Imagen = cvQueryFrame(CapVideo);
+      if (!Imagen)
+         break;
+
+      cvShowImage("Imagen Original",Imagen);
+      cvCvtColor(Imagen, ImgNueGris, CV_RGB2GRAY);
+
+      cvShowImage("Nueva Gris",ImgNueGris);
+
+      for (row = 0; row < height; row++)
+         for (col = 0; col < width; col++)
+         {
+            ppixelImgFonGris = cvPtr2D( ImgFonGris, row, col, NULL );
+            ppixelImgNueGris = cvPtr2D( ImgNueGris, row, col, NULL );
+            ppixelImgFreGris = cvPtr2D( ImgFreGris, row, col, NULL );
+	    ppixelImgLoc = cvPtr2D( ImgLocked, row, col, NULL  );
+
+            if (abs((*ppixelImgFonGris)-(*ppixelImgNueGris)) < umbral){
+	       *ppixelImgFreGris = 0;
+               ConLockedFre[row][col]=0;
+               ConLockedFon[row][col]++;
+	       
+	       if (ConLockedFon[row][col] > umbfan){
+                  *ppixelImgLoc = 255;
+                  ConLockedFon[row][col]=0;
+               }
+               else
+                  *ppixelImgLoc = 0;
+	       
+	       if (*ppixelImgLoc = 255){
+                   //printf("%d", ConLockedFon[row][col]);
+                   *ppixelImgFonGris = (1 - alfa)*(*ppixelImgFonGris) + alfa*(*ppixelImgNueGris);
+                }
+                else
+                   *ppixelImgFonGris = *ppixelImgNueGris;
+            }
+
+            else{
+	       *ppixelImgFreGris = 255;
+               ConLockedFon[row][col]=0;
+               ConLockedFre[row][col]++;
+
+               if (ConLockedFre[row][col] < umbfan)
+                  *ppixelImgLoc = 0;
+               else
+                  *ppixelImgLoc = 255;
+
+               if (*ppixelImgLoc == 0)
+                  *ppixelImgFonGris = (1 - alfa)*(*ppixelImgFonGris) + alfa*(*ppixelImgNueGris);
+               else
+                  *ppixelImgFonGris = *ppixelImgNueGris;
+            }
+      }
+    
+      cvSmooth( ImgFreGris, ImgFreGris, CV_GAUSSIAN, 3, 3, 0, 0);
+      cvShowImage("Frente", ImgFreGris);
+
+      if (cvWaitKey(33)==27)
+         break;  
+   }
+
+
+   cvReleaseImage(&ImgFonGris);
+   cvReleaseImage(&ImgNueGris);
+   cvReleaseImage(&ImgFreGris);
+   cvReleaseImage(&ImgLocked);
+
+}

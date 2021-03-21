@@ -1,0 +1,1 @@
+/usr/bin/c++.exe -g  -Wl,--enable-auto-import CMakeFiles/FigurasSobrepuestas.dir/main.cpp.o  -o FigurasSobrepuestas.exe -Wl,--out-implib,libFigurasSobrepuestas.dll.a -Wl,--major-image-version,0,--minor-image-version,0  -lbgi -lgdi32 -lcomdlg32 -luuid -loleaut32 -lole32 

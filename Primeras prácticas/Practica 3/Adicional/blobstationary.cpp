@@ -1,0 +1,132 @@
+#include "blobfuns.h"
+#include <opencv2/opencv.hpp>
+
+#define FPS 25 //framerate of the input video
+#define MIN_SECS 10.0 //minimum number of seconds to consider a foreground pixel as stationary
+
+#define C_COST 1 //increment cost for stationary detection
+#define D_COST 5 //penalization cost for stationary detection
+
+static int primeraImg = 0;
+static IplImage *ImgFonGris1;
+
+/**
+ *	Function to detect stationary foreground based on accumulator techniques. All the input arguments must be 
+ *  initialized prior using this function.
+ *
+ * \param frame Input image
+ * \param fgmask Foreground/Background segmentation mask (1-channel, uint8)  
+ * \param fgmask_counter counter for stationary pixels (1-channel, float) 
+  obtained in the analysis of the previous frame (to be updated in this function)
+ * \param sfgmask Foregroung segmentation mask (1-channel, uint8)  with the stationary pixels
+ *
+ * \return Operation code (negative if not succesfull operation) 
+ */
+
+
+int detectStationaryForeground(IplImage* frame, IplImage *fgmask, IplImage* fgmask_counter, IplImage *sfgmask)
+{
+	//check input validity and return -1 if any is not valid
+	//...
+	if (!frame)
+		exit(1);
+	//num frames to static
+	int numframes2static = (int)(FPS * MIN_SECS);
+
+        if (primeraImg == 0){
+           ImgFonGris1 = cvCreateImage(cvGetSize(frame), frame->depth, 1);
+	   cvCvtColor(frame, ImgFonGris1, CV_RGB2GRAY);
+           primeraImg = 1;
+        }
+
+        int umbral = 50;
+        int alfabandonos = 0.5;
+
+	uchar *ppixelImgFreGris, *ppixelImgNueGris, *ppixelImgFonGris;
+        uchar *ppixelImgAbandon, *ppixelContador;
+
+        int r = 50;
+        int row, col;
+
+        cvNamedWindow("Abandonados",0);
+
+	IplImage *aux1;
+
+	float width1, height1;
+	CvPoint sP1, sP2;
+
+        BasicBlob *auxpblob;
+	
+	CvFont font;
+	cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5);
+
+
+	//operate with fgmask to update fgmask_counter and operate with fgmask_counter to update sfgmask
+	//...
+	for (row = 0; row < frame->height; row++)
+      	   for (col = 0; col < frame->width; col++)
+           {
+               ppixelImgNueGris = cvPtr2D( frame, row, col, NULL );
+               ppixelImgFreGris = cvPtr2D( fgmask, row, col, NULL );
+               ppixelImgFonGris = cvPtr2D( ImgFonGris1, row, col, NULL );
+
+               if (abs((*ppixelImgFonGris)-(*ppixelImgNueGris)) < umbral){
+	          *ppixelImgFonGris = alfabandonos*(*ppixelImgNueGris) + (1-alfabandonos)*(*ppixelImgFonGris);
+                  *ppixelImgFreGris = 0;
+               }
+               else{
+                  *ppixelImgFonGris = *ppixelImgFonGris;
+                  *ppixelImgFreGris = 255;
+               }
+
+	       ppixelImgAbandon = cvPtr2D( sfgmask, row, col, NULL  );
+               ppixelContador = cvPtr2D( fgmask_counter, row, col, NULL  );
+	       //ppixelImgFreGris = cvPtr2D( fgmask, row, col, NULL );
+
+               if (*ppixelImgFreGris == 255){
+                  if (*ppixelContador <= numframes2static){
+                     *ppixelContador+=10;
+                  }
+                  else{
+                     *ppixelImgAbandon = 255;
+                  }
+               }
+               else{
+                  if (*ppixelContador >= r)
+                     *ppixelContador=*ppixelContador-r;
+                  else{
+                     *ppixelImgAbandon = 0;
+                     *ppixelContador = 0;
+                  }
+               }
+           }
+
+      	cvShowImage("Abandonados", sfgmask);
+
+	BlobList *blobListAband = new BlobList();
+
+        extractBlobs(frame, sfgmask, blobListAband); //blob extraction
+	
+	aux1 = frame;
+
+	for(int i = 0; i < blobListAband->getBlobNum(); i++) {
+
+           auxpblob = blobListAband->getBlob(i);
+ 
+           width1 = auxpblob->getWidth();
+	   height1 = auxpblob->getHeight();
+
+           sP1 = cvPoint(auxpblob->getX(), auxpblob->getY());
+           sP2 = cvPoint(auxpblob->getX() + auxpblob->getWidth(), auxpblob->getY() + auxpblob->getHeight());
+
+           cvRectangle(aux1, sP1, sP2, CV_RGB(255,0,0), 2, CV_AA, 0);
+           cvPutText(aux1, "ABANDONADO", sP1, &font, CV_RGB(255,0,0));   	//ROJO ABANDONADO
+	}
+
+	cvShowImage("Etiquetado", aux1);
+
+
+
+
+	return 1;
+}

@@ -1,0 +1,19 @@
+#ifndef BLOBFUNS_H_INCLUDE
+#define BLOBFUNS_H_INCLUDE
+
+#include "BasicBlob.h"
+#include "BlobList.h"
+
+//blob extraction functions (included in 'blobextrac.cpp')
+int extractBlobs(IplImage* frame, IplImage *fgmask, BlobList *pBlobList);
+IplImage *paintBlobImage(IplImage* frame, BlobList *pBlobList);
+
+//blob classification functions (included in 'blobclassify.cpp')
+int classifyBlobs(IplImage* frame, IplImage *fgmask, BlobList *pBlobList);
+IplImage *paintBlobClasses(IplImage* frame, BlobList *pBlobList);
+
+//stationary blob detection functions (included in 'blobstationary.cpp')
+int detectStationaryForeground(IplImage* frame, IplImage *fgmask, IplImage* fgmask_counter, IplImage *sfgmask);
+
+
+#endif
